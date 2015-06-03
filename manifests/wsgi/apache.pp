@@ -59,6 +59,9 @@
 # [*vhost_headers*]
 #   (optional) Headers for the vhost.
 #
+# [*root_url*]
+#   (optional) Override root URL.
+#
 # [*extra_params*]
 #   (optional) A hash of extra paramaters for apache::wsgi class.
 #   Defaults to {}
@@ -78,6 +81,7 @@ class horizon::wsgi::apache (
   $vhost_conf_name     = 'horizon_vhost',
   $vhost_ssl_conf_name = 'horizon_ssl_vhost',
   $vhost_headers       = undef,
+  $root_url            = $::horizon::params::root_url,
   $extra_params        = {},
 ) {
 
@@ -133,7 +137,7 @@ class horizon::wsgi::apache (
   } else {
     $ensure_ssl_vhost = 'absent'
     $redirect_match = '^/$'
-    $redirect_url   = $::horizon::params::root_url
+    $redirect_url   = $root_url
   }
 
   Package['horizon'] -> Package[$::horizon::params::http_service]
@@ -181,7 +185,7 @@ class horizon::wsgi::apache (
     ssl_cert                    => $horizon_cert,
     ssl_key                     => $horizon_key,
     ssl_ca                      => $horizon_ca,
-    wsgi_script_aliases         => hash([$::horizon::params::root_url, $::horizon::params::django_wsgi]),
+    wsgi_script_aliases         => hash([$root_url, $::horizon::params::django_wsgi]),
     wsgi_daemon_process         => $::horizon::params::wsgi_group,
     wsgi_daemon_process_options => {
       processes                 => $wsgi_processes,
@@ -219,7 +223,7 @@ class horizon::wsgi::apache (
     wsgi_daemon_process  => 'horizon-ssl',
     wsgi_process_group   => 'horizon-ssl',
     redirectmatch_regexp => '^/$',
-    redirectmatch_dest   => $::horizon::params::root_url,
+    redirectmatch_dest   => $root_url,
   }))
 
 }
