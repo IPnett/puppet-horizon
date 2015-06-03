@@ -56,6 +56,9 @@
 #   (Optional) Description
 #   Defaults to 'horizon_ssl_vhost'.
 #
+# [*vhost_headers*]
+#   (optional) Headers for the vhost.
+#
 # [*extra_params*]
 #   (optional) A hash of extra paramaters for apache::wsgi class.
 #   Defaults to {}
@@ -74,6 +77,7 @@ class horizon::wsgi::apache (
   $priority            = '15',
   $vhost_conf_name     = 'horizon_vhost',
   $vhost_ssl_conf_name = 'horizon_ssl_vhost',
+  $vhost_headers       = undef,
   $extra_params        = {},
 ) {
 
@@ -188,6 +192,7 @@ class horizon::wsgi::apache (
     wsgi_import_script   => $::horizon::params::django_wsgi,
     wsgi_process_group   => $::horizon::params::wsgi_group,
     redirectmatch_status => 'permanent',
+    headers => $vhost_headers,
   }
 
   # Only add the 'ip' element to the $default_vhost_conf hash if it was explicitly
