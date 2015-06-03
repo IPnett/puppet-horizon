@@ -222,8 +222,8 @@ class horizon::wsgi::apache (
     ensure               => $ensure_ssl_vhost,
     wsgi_daemon_process  => 'horizon-ssl',
     wsgi_process_group   => 'horizon-ssl',
-    redirectmatch_regexp => '^/$',
-    redirectmatch_dest   => $root_url,
+    redirectmatch_regexp => ($root_url != '/' ? '^/$'     : undef),
+    redirectmatch_dest   => ($root_url != '/' ? $root_url : undef),
   }))
 
 }
