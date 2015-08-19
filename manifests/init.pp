@@ -34,9 +34,17 @@
 #  [*package_ensure*]
 #    (optional) Package ensure state. Defaults to 'present'.
 #
+#  [*cache_backend*]
+#   (optional) Horizon cache backend.
+#   Defaults: 'django.core.cache.backends.locmem.LocMemCache'
+#
+#  [*cache_options*]
+#   (optional) A hash of parameters to enable specific cache options.
+#   Defaults to undef
+#
 #  [*cache_server_ip*]
 #    (optional) Memcached IP address. Can be a string, or an array.
-#    Defaults to '127.0.0.1'.
+#    Defaults to undef.
 #
 #  [*cache_server_port*]
 #    (optional) Memcached port. Defaults to '11211'.
@@ -73,6 +81,9 @@
 #  [*api_result_limit*]
 #    (optional) Maximum number of Swift containers/objects to display
 #    on a single page. Defaults to 1000.
+#
+#  [*log_handler*]
+#    (optional) Log handler. Defaults to 'file'
 #
 #  [*log_level*]
 #    (optional) Log level. Defaults to 'INFO'. WARNING: Setting this to
@@ -198,6 +209,20 @@
 #    (optional) Tuskar-UI - Deployment mode ('poc' or 'scale')
 #    Defaults to 'scale'
 #
+#  [*custom_theme_path*]
+#    (optional) The directory location for the theme (e.g., "static/themes/blue")
+#    Default to undefined
+#
+#  [*redirect_type*]
+#    (optional) What type of redirect to use when redirecting an http request
+#    for a user. This should be either 'temp' or 'permanent'. Setting this value
+#    to 'permanent' will result in the use of a 301 redirect which may be cached
+#    by a user's browser.  Setting this value to 'temp' will result in the use
+#    of a 302 redirect which is not cached by browsers and may solve issues if
+#    users report errors accessing horizon. Only used if configure_apache is
+#    set to true.
+#    Defaults to 'permanent'
+#
 # === Examples
 #
 #  class { 'horizon':
@@ -213,7 +238,9 @@ class horizon(
   $secret_key,
   $fqdn                                = undef,
   $package_ensure                      = 'present',
-  $cache_server_ip                     = '127.0.0.1',
+  $cache_backend                       = 'django.core.cache.backends.locmem.LocMemCache',
+  $cache_options                       = undef,
+  $cache_server_ip                     = undef,
   $cache_server_port                   = '11211',
   $horizon_app_links                   = false,
   $keystone_url                        = 'http://127.0.0.1:5000/v2.0',
@@ -223,6 +250,7 @@ class horizon(
   $secondary_endpoint_type             = undef,
   $available_regions                   = undef,
   $api_result_limit                    = 1000,
+  $log_handler                         = 'file',
   $log_level                           = 'INFO',
   $help_url                            = 'http://docs.openstack.org',
   $local_settings_template             = 'horizon/local_settings.py.erb',
@@ -247,6 +275,8 @@ class horizon(
   $tuskar_ui_ironic_discoverd_url      = 'http://127.0.0.1:5050',
   $tuskar_ui_undercloud_admin_password = undef,
   $tuskar_ui_deployment_mode           = 'scale',
+  $custom_theme_path                   = undef,
+  $redirect_type                       = 'permanent',
   # DEPRECATED PARAMETERS
   $can_set_mount_point                 = undef,
   $vhost_extra_params                  = undef,
@@ -296,7 +326,7 @@ class horizon(
   package { 'horizon':
     ensure => $package_ensure,
     name   => $::horizon::params::package_name,
-    tag    => 'openstack',
+    tag    => ['openstack', 'horizon-package'],
   }
 
   concat { $::horizon::params::config_file:
@@ -335,6 +365,7 @@ class horizon(
       horizon_key    => $horizon_key,
       horizon_ca     => $horizon_ca,
       extra_params   => $vhost_extra_params,
+      redirect_type  => $redirect_type,
     }
   }
 

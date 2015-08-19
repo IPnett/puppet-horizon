@@ -118,18 +118,21 @@ SECRET_KEY = '<%= @secret_key %>'
 
 CACHES = {
     'default': {
-        <% if @cache_server_ip %>
-#        'BACKEND': 'django.core.cache.backends.locmem.LocMemCache'
-        'BACKEND': 'django.core.cache.backends.memcached.MemcachedCache',
+    <% if @cache_options.kind_of?(Hash) %>
+        'OPTIONS': {
+        <% @cache_options.sort.each do |opt_name,opt_val| -%>
+        '<%= opt_name -%>': <%= opt_val -%>,
+        <% end -%>},
+    <% end -%>
+    'BACKEND': '<%= @cache_backend %>',
+    <% if @cache_server_ip %>
           <% if @cache_server_ip.kind_of?(Array) %>
             <%  split = ":" + @cache_server_port + "','" %>
         'LOCATION': [ <% @cache_server_ip.each do |ip| -%>'<%= ip -%>:<%= @cache_server_port -%>',<% end -%> ],
-            <% else %>
+          <% else %>
         'LOCATION': '<%= @cache_server_ip %>:<%= @cache_server_port %>',
           <% end %>
-        <% else %>
-        'BACKEND': 'django.core.cache.backends.locmem.LocMemCache'
-        <% end %>
+    <% end %>
     }
 }
 
@@ -278,6 +281,16 @@ EXTERNAL_MONITORING = <%= @horizon_app_links %>
 #     'reverse': False,
 # }
 
+# CUSTOM_THEME_PATH allows to set to the directory location for the
+# theme (e.g., "static/themes/blue"). The path can either be
+# relative to the openstack_dashboard directory or an absolute path
+# to an accessible location on the file system.
+# If not specified, the default CUSTOM_THEME_PATH is
+# static/themes/default.
+<% if @custom_theme_path %>
+CUSTOM_THEME_PATH = '<%= @custom_theme_path %>'
+<% end %>
+
 # The Horizon Policy Enforcement engine uses these values to load per service
 # policy rule files. The content of these files should match the files the
 # OpenStack services are using to determine role based access control in the
@@ -325,6 +338,9 @@ LOGGING = {
             'format': '%(asctime)s %(process)d %(levelname)s %(name)s '
                       '%(message)s'
         },
+        'normal': {
+            'format': 'dashboard-%(name)s: %(levelname)s %(message)s'
+        },
     },
     'handlers': {
         'null': {
@@ -342,6 +358,13 @@ LOGGING = {
             'filename': '<%= scope.lookupvar("horizon::params::logdir") %>/horizon.log',
             'formatter': 'verbose',
         },
+        'syslog': {
+            'level': '<%= @log_level %>',
+            'facility': 'local1',
+            'class': 'logging.handlers.SysLogHandler',
+            'address': '/dev/log',
+            'formatter': 'normal',
+        }
     },
     'loggers': {
         # Logging from django.db.backends is VERY verbose, send to null
@@ -356,98 +379,98 @@ LOGGING = {
         },
         'horizon': {
             # 'handlers': ['console'],
-            'handlers': ['file'],
+            'handlers': ['<%= @log_handler %>'],
             # 'level': 'DEBUG',
             'level': '<%= @log_level %>',
             'propagate': False,
         },
         'openstack_dashboard': {
             # 'handlers': ['console'],
-            'handlers': ['file'],
+            'handlers': ['<%= @log_handler %>'],
             # 'level': 'DEBUG',
             'level': '<%= @log_level %>',
             'propagate': False,
         },
         'novaclient': {
             # 'handlers': ['console'],
-            'handlers': ['file'],
+            'handlers': ['<%= @log_handler %>'],
             # 'level': 'DEBUG',
             'level': '<%= @log_level %>',
             'propagate': False,
         },
         'cinderclient': {
             # 'handlers': ['console'],
-            'handlers': ['file'],
+            'handlers': ['<%= @log_handler %>'],
             # 'level': 'DEBUG',
             'level': '<%= @log_level %>',
             'propagate': False,
         },
         'keystoneclient': {
             # 'handlers': ['console'],
-            'handlers': ['file'],
+            'handlers': ['<%= @log_handler %>'],
             # 'level': 'DEBUG',
             'level': '<%= @log_level %>',
             'propagate': False,
         },
         'glanceclient': {
             # 'handlers': ['console'],
-            'handlers': ['file'],
+            'handlers': ['<%= @log_handler %>'],
             # 'level': 'DEBUG',
             'level': '<%= @log_level %>',
             'propagate': False,
         },
         'neutronclient': {
             # 'handlers': ['console'],
-            'handlers': ['file'],
+            'handlers': ['<%= @log_handler %>'],
             # 'level': 'DEBUG',
             'level': '<%= @log_level %>',
             'propagate': False,
         },
         'heatclient': {
             # 'handlers': ['console'],
-            'handlers': ['file'],
+            'handlers': ['<%= @log_handler %>'],
             # 'level': 'DEBUG',
             'level': '<%= @log_level %>',
             'propagate': False,
         },
         'ceilometerclient': {
             # 'handlers': ['console'],
-            'handlers': ['file'],
+            'handlers': ['<%= @log_handler %>'],
             # 'level': 'DEBUG',
             'level': '<%= @log_level %>',
             'propagate': False,
         },
         'troveclient': {
             # 'handlers': ['console'],
-            'handlers': ['file'],
+            'handlers': ['<%= @log_handler %>'],
             # 'level': 'DEBUG',
             'level': '<%= @log_level %>',
             'propagate': False,
         },
         'swiftclient': {
             # 'handlers': ['console'],
-            'handlers': ['file'],
+            'handlers': ['<%= @log_handler %>'],
             # 'level': 'DEBUG',
             'level': '<%= @log_level %>',
             'propagate': False,
         },
         'openstack_auth': {
             # 'handlers': ['console'],
-            'handlers': ['file'],
+            'handlers': ['<%= @log_handler %>'],
             # 'level': 'DEBUG',
             'level': '<%= @log_level %>',
             'propagate': False,
         },
         'nose.plugins.manager': {
             # 'handlers': ['console'],
-            'handlers': ['file'],
+            'handlers': ['<%= @log_handler %>'],
             # 'level': 'DEBUG',
             'level': '<%= @log_level %>',
             'propagate': False,
         },
         'django': {
             # 'handlers': ['console'],
-            'handlers': ['file'],
+            'handlers': ['<%= @log_handler %>'],
             # 'level': 'DEBUG',
             'level': '<%= @log_level %>',
             'propagate': False,

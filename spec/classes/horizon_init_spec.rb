@@ -28,7 +28,7 @@ describe 'horizon' do
           is_expected.to contain_package('python-lesscpy').with_ensure('present')
           is_expected.to contain_package('horizon').with(
             :ensure => 'present',
-            :tag    => 'openstack'
+            :tag    => ['openstack', 'horizon-package'],
           )
       }
       it { is_expected.to contain_exec('refresh_horizon_django_cache').with({
@@ -39,10 +39,11 @@ describe 'horizon' do
 
       it 'configures apache' do
         is_expected.to contain_class('horizon::wsgi::apache').with({
-          :servername   => 'some.host.tld',
-          :listen_ssl   => false,
-          :servername   => 'some.host.tld',
-          :extra_params => {},
+          :servername    => 'some.host.tld',
+          :listen_ssl    => false,
+          :servername    => 'some.host.tld',
+          :extra_params  => {},
+          :redirect_type => 'permanent',
         })
       end
 
@@ -83,10 +84,14 @@ describe 'horizon' do
     context 'with overridden parameters' do
       before do
         params.merge!({
+          :cache_backend           => 'horizon.backends.memcached.HorizonMemcached',
+          :cache_options           => {'SOCKET_TIMEOUT' => 1,'SERVER_RETRIES' => 1,'DEAD_RETRY' => 1},
           :cache_server_ip         => '10.0.0.1',
           :django_session_engine   => 'django.contrib.sessions.backends.cache',
           :keystone_default_role   => 'SwiftOperator',
           :keystone_url            => 'https://keystone.example.com:4682',
+          :log_handler             => 'syslog',
+          :log_level               => 'DEBUG',
           :openstack_endpoint_type => 'internalURL',
           :secondary_endpoint_type => 'ANY-VALUE',
           :django_debug            => true,
@@ -97,7 +102,8 @@ describe 'horizon' do
           :neutron_options         => {'enable_lb' => true, 'enable_firewall' => true, 'enable_quotas' => false, 'enable_security_group' => false, 'enable_vpn' => true,
                                        'enable_distributed_router' => false, 'enable_ha_router' => false, 'profile_support' => 'cisco', },
           :file_upload_temp_dir    => '/var/spool/horizon',
-          :secure_cookies          => true
+          :secure_cookies          => true,
+          :custom_theme_path       => 'static/themes/green'
         })
       end
 
@@ -108,6 +114,10 @@ describe 'horizon' do
           'CSRF_COOKIE_SECURE = True',
           'SESSION_COOKIE_SECURE = True',
           "SECRET_KEY = 'elj1IWiLoWHgcyYxFVLj7cM5rGOOxWl0'",
+          "                'DEAD_RETRY': 1,",
+          "                'SERVER_RETRIES': 1,",
+          "                'SOCKET_TIMEOUT': 1,",
+          "        'BACKEND': 'horizon.backends.memcached.HorizonMemcached',",
           "        'LOCATION': '10.0.0.1:11211',",
           'SESSION_ENGINE = "django.contrib.sessions.backends.cache"',
           'OPENSTACK_KEYSTONE_URL = "https://keystone.example.com:4682"',
@@ -124,6 +134,9 @@ describe 'horizon' do
           'OPENSTACK_ENDPOINT_TYPE = "internalURL"',
           'SECONDARY_ENDPOINT_TYPE = "ANY-VALUE"',
           'API_RESULT_LIMIT = 4682',
+          "CUSTOM_THEME_PATH = 'static/themes/green'",
+          "            'level': 'DEBUG',",
+          "            'handlers': ['syslog'],",
           'COMPRESS_OFFLINE = False',
           "FILE_UPLOAD_TEMP_DIR = '/var/spool/horizon'"
         ])
@@ -181,13 +194,15 @@ describe 'horizon' do
     context 'with vhost_extra_params' do
       before do
         params.merge!({
-          :vhost_extra_params   => { 'add_listen' => false },
+          :vhost_extra_params => { 'add_listen' => false },
+          :redirect_type      => 'temp',
         })
       end
 
       it 'configures apache' do
         is_expected.to contain_class('horizon::wsgi::apache').with({
-          :extra_params => { 'add_listen' => false },
+          :extra_params  => { 'add_listen' => false },
+          :redirect_type => 'temp',
         })
       end
     end

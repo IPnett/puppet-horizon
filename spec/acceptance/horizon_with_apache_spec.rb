@@ -11,24 +11,30 @@ describe 'horizon class' do
       case $::osfamily {
         'Debian': {
           include ::apt
-          class { '::openstack_extras::repo::debian::ubuntu':
-            release         => 'kilo',
-            package_require => true,
+          apt::ppa { 'ppa:ubuntu-cloud-archive/liberty-staging':
+            # it's false by default in 2.x series but true in 1.8.x
+            package_manage => false,
           }
+          Exec['apt_update'] -> Package<||>
         }
         'RedHat': {
           class { '::openstack_extras::repo::redhat::redhat':
-            # Kilo is not GA yet, so let's use the testing repo
             manage_rdo => false,
-            repo_hash  => {
-              'rdo-kilo-testing' => {
-                'baseurl'  => 'https://repos.fedorapeople.org/repos/openstack/openstack-kilo/testing/el7/',
-                # packages are not GA so not signed
-                'gpgcheck' => '0',
-                'priority' => 97,
+            repo_hash => {
+              # we need kilo repo to be installed for dependencies
+              'rdo-kilo' => {
+                'baseurl' => 'https://repos.fedorapeople.org/repos/openstack/openstack-kilo/el7/',
+                'descr'   => 'RDO kilo',
+                'gpgcheck' => 'no',
+              },
+              'rdo-liberty' => {
+                'baseurl'  => 'http://trunk.rdoproject.org/centos7/current/',
+                'descr'    => 'RDO trunk',
+                'gpgcheck' => 'no',
               },
             },
           }
+          package { 'openstack-selinux': ensure => 'latest' }
         }
         default: {
           fail("Unsupported osfamily (${::osfamily})")
@@ -52,11 +58,11 @@ describe 'horizon class' do
     # basic test for now, to make sure Apache serve /horizon dashboard
     if os[:family] == 'Debian'
       describe command('curl --connect-timeout 5 -sL -w "%{http_code} %{url_effective}\n" http://localhost/horizon/ -o /dev/null') do
-        it { should return_exit_status 0 }
+        it { is_expected.to return_exit_status 0 }
       end
     elsif os[:family] == 'RedHat'
       describe command('curl --connect-timeout 5 -sL -w "%{http_code} %{url_effective}\n" http://localhost/dashboard/ -o /dev/null') do
-        it { should return_exit_status 0 }
+        it { is_expected.to return_exit_status 0 }
       end
     end
 
