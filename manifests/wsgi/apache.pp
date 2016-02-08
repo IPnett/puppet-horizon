@@ -56,6 +56,12 @@
 #   (Optional) Description
 #   Defaults to 'horizon_ssl_vhost'.
 #
+# [*vhost_headers*]
+#   (optional) Headers for the vhost.
+#
+# [*root_url*]
+#   (optional) Override root URL.
+#
 # [*extra_params*]
 #   (optional) A hash of extra paramaters for apache::wsgi class.
 #   Defaults to {}
@@ -84,6 +90,8 @@ class horizon::wsgi::apache (
   $priority            = '15',
   $vhost_conf_name     = 'horizon_vhost',
   $vhost_ssl_conf_name = 'horizon_ssl_vhost',
+  $vhost_headers       = undef,
+  $root_url            = $::horizon::params::root_url,
   $extra_params        = {},
   $redirect_type       = 'permanent',
 ) {
@@ -140,7 +148,7 @@ class horizon::wsgi::apache (
   } else {
     $ensure_ssl_vhost = 'absent'
     $redirect_match = '^/$'
-    $redirect_url   = $::horizon::params::root_url
+    $redirect_url   = $root_url
   }
 
   if !($redirect_type in ['temp', 'permanent']) {
@@ -192,7 +200,7 @@ class horizon::wsgi::apache (
     ssl_cert                    => $horizon_cert,
     ssl_key                     => $horizon_key,
     ssl_ca                      => $horizon_ca,
-    wsgi_script_aliases         => hash([$::horizon::params::root_url, $::horizon::params::django_wsgi]),
+    wsgi_script_aliases         => hash([$root_url, $::horizon::params::django_wsgi]),
     wsgi_daemon_process         => $::horizon::params::wsgi_group,
     wsgi_daemon_process_options => {
       processes                 => $wsgi_processes,
@@ -203,6 +211,7 @@ class horizon::wsgi::apache (
     wsgi_import_script   => $::horizon::params::django_wsgi,
     wsgi_process_group   => $::horizon::params::wsgi_group,
     redirectmatch_status => $redirect_type,
+    headers              => $vhost_headers,
   }
 
   # Only add the 'ip' element to the $default_vhost_conf hash if it was explicitly
@@ -228,8 +237,8 @@ class horizon::wsgi::apache (
     ensure               => $ensure_ssl_vhost,
     wsgi_daemon_process  => 'horizon-ssl',
     wsgi_process_group   => 'horizon-ssl',
-    redirectmatch_regexp => '^/$',
-    redirectmatch_dest   => $::horizon::params::root_url,
+    redirectmatch_regexp => $root_url ? { '/' => undef, default => '^/$' },
+    redirectmatch_dest   => $root_url ? { '/' => undef, default => $root_url },
   }))
 
 }
