@@ -33,6 +33,7 @@ describe 'horizon::wsgi::apache' do
         is_expected.to contain_class('apache')
         is_expected.to contain_class('apache::mod::wsgi')
         is_expected.to contain_service('httpd').with_name(platforms_params[:http_service])
+        is_expected.to contain_package('httpd').with_name(platforms_params[:http_service])
         is_expected.to contain_file(platforms_params[:httpd_config_file])
         is_expected.to contain_package('horizon').with_ensure('present')
         is_expected.to contain_apache__vhost('horizon_vhost').with(
@@ -68,6 +69,7 @@ describe 'horizon::wsgi::apache' do
         is_expected.to contain_class('apache')
         is_expected.to contain_class('apache::mod::wsgi')
         is_expected.to contain_service('httpd').with_name(platforms_params[:http_service])
+        is_expected.to contain_package('httpd').with_name(platforms_params[:http_service])
         is_expected.to contain_file(platforms_params[:httpd_config_file])
         is_expected.to contain_package('horizon').with_ensure('present')
         is_expected.to contain_apache__vhost('horizon_vhost').with(
@@ -122,7 +124,7 @@ describe 'horizon::wsgi::apache' do
           'redirectmatch_dest'     => platforms_params[:root_url],
           'wsgi_process_group'     => 'horizon-ssl',
           'wsgi_daemon_process'    => 'horizon-ssl',
-          'wsgi_script_aliases'    => { platforms_params[:root_url] => '/usr/share/openstack-dashboard/openstack_dashboard/wsgi/django.wsgi' }
+          'wsgi_script_aliases'  => { platforms_params[:root_url] => '/usr/share/openstack-dashboard/openstack_dashboard/wsgi/django.wsgi' },
         )}
 
         it { is_expected.to contain_apache__vhost('horizon_vhost').with(
@@ -139,7 +141,7 @@ describe 'horizon::wsgi::apache' do
           'redirectmatch_dest'   => 'https://some.host.tld',
           'wsgi_process_group'   => platforms_params[:wsgi_group],
           'wsgi_daemon_process'  => platforms_params[:wsgi_group],
-          'wsgi_script_aliases'  => { platforms_params[:root_url] => '/usr/share/openstack-dashboard/openstack_dashboard/wsgi/django.wsgi' }
+          'wsgi_script_aliases'  => { platforms_params[:root_url] => '/usr/share/openstack-dashboard/openstack_dashboard/wsgi/django.wsgi' },
         )}
       end
 
@@ -292,5 +294,4 @@ describe 'horizon::wsgi::apache' do
       end
     end
   end
-
 end

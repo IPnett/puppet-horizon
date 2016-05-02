@@ -30,16 +30,10 @@ describe 'horizon' do
             :tag    => ['openstack', 'horizon-package'],
           )
       }
-      it {
-        if facts[:os_package_type] == 'rpm'
-          is_expected.to contain_exec('refresh_horizon_django_cache').with({
+      it { is_expected.to contain_exec('refresh_horizon_django_cache').with({
           :command     => '/usr/share/openstack-dashboard/manage.py collectstatic --noinput --clear && /usr/share/openstack-dashboard/manage.py compress --force',
           :refreshonly => true,
-          })
-        else
-          is_expected.to_not contain_exec('refresh_horizon_django_cache')
-        end
-      }
+      })}
       it {
         if facts[:os_package_type] == 'rpm'
           is_expected.to contain_concat(platforms_params[:config_file]).that_notifies('Exec[refresh_horizon_django_cache]')
@@ -62,7 +56,7 @@ describe 'horizon' do
           'DEBUG = False',
           "LOGIN_URL = '#{platforms_params[:root_url]}/auth/login/'",
           "LOGOUT_URL = '#{platforms_params[:root_url]}/auth/logout/'",
-          "LOGIN_REDIRECT_URL = '#{platforms_params[:root_url]}'",
+          "LOGIN_REDIRECT_URL = '#{platforms_params[:root_url]}/'",
           "ALLOWED_HOSTS = ['*', ]",
           "  'identity': 3,",
           "SECRET_KEY = 'elj1IWiLoWHgcyYxFVLj7cM5rGOOxWl0'",
@@ -78,6 +72,7 @@ describe 'horizon' do
           "    'enable_security_group': True,",
           "    'enable_vpn': False,",
           'API_RESULT_LIMIT = 1000',
+          'TIME_ZONE = "UTC"',
           'COMPRESS_OFFLINE = True',
           "FILE_UPLOAD_TEMP_DIR = '/tmp'"
         ])
@@ -121,7 +116,8 @@ describe 'horizon' do
           :keystone_multidomain_support => true,
           :keystone_default_domain      => 'domain.tld',
           :overview_days_range          => 1,
-          :session_timeout              => 1800
+          :session_timeout              => 1800,
+          :timezone                     => 'Asia/Shanghai',
         })
       end
 
@@ -159,6 +155,7 @@ describe 'horizon' do
           'OPENSTACK_ENDPOINT_TYPE = "internalURL"',
           'SECONDARY_ENDPOINT_TYPE = "ANY-VALUE"',
           'API_RESULT_LIMIT = 4682',
+          'TIME_ZONE = "Asia/Shanghai"',
           "CUSTOM_THEME_PATH = 'static/themes/green'",
           "            'level': 'DEBUG',",
           "            'handlers': ['syslog'],",
@@ -187,12 +184,21 @@ describe 'horizon' do
         ])
       end
 
+      it { is_expected.to contain_exec('refresh_horizon_django_cache') }
+    end
+
+    context 'installs python memcache library when cache_backend is set to memcache' do
+      before do
+        params.merge!({
+          :cache_backend => 'django.core.cache.backends.memcached.MemcachedCache'
+        })
+      end
+
       it {
-        if facts[:os_package_type] == 'rpm'
-          is_expected.to contain_exec('refresh_horizon_django_cache')
-        else
-          is_expected.to_not contain_exec('refresh_horizon_django_cache')
-        end
+        is_expected.to contain_package('python-memcache').with(
+          :ensure => 'present',
+          :tag    => ['openstack', 'horizon-package']
+         )
       }
     end
 
@@ -414,7 +420,8 @@ describe 'horizon' do
     before do
       facts.merge!({
         :osfamily               => 'RedHat',
-        :operatingsystemrelease => '6.0'
+        :operatingsystemrelease => '6.0',
+        :os_package_type        => 'rpm'
       })
     end
 
@@ -437,8 +444,8 @@ describe 'horizon' do
     before do
       facts.merge!({
         :osfamily               => 'Debian',
-        :operatingsystem        => 'Debian',
         :operatingsystemrelease => '6.0',
+        :operatingsystem        => 'Debian',
         :os_package_type        => 'debian'
       })
     end
@@ -482,5 +489,4 @@ describe 'horizon' do
       ])
     end
   end
-
 end

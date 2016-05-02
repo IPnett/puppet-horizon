@@ -256,10 +256,18 @@
 #    of data fetched by default when rendering the Overview panel.
 #    Defaults to undef.
 #
+#  [*root_url*]
+#    (optional) The base URL used to contruct horizon web addresses.
+#    Defaults to '/dashboard' or '/horizon' depending OS
+#
 #  [*session_timeout*]
 #    (optional) The session timeout for horizon in seconds. After this many seconds of inactivity
 #    the user is logged out.
 #    Defaults to 1800.
+#
+#  [*timezone*]
+#    (optional) The timezone of the server.
+#    Defaults to 'UTC'.
 #
 # === Examples
 #
@@ -321,15 +329,15 @@ class horizon(
   $keystone_default_domain             = undef,
   $image_backend                       = {},
   $overview_days_range                 = undef,
+  $root_url                            = $::horizon::params::root_url,
   $session_timeout                     = 1800,
+  $timezone                            = 'UTC',
   # DEPRECATED PARAMETERS
   $can_set_mount_point                 = undef,
   $vhost_extra_params                  = undef,
   $secure_cookies                      = false,
   $django_session_engine               = undef,
-) {
-
-  include ::horizon::params
+) inherits ::horizon::params {
 
   $hypervisor_defaults = {
     'can_set_mount_point' => true,
@@ -373,6 +381,12 @@ class horizon(
   $neutron_options_real    = merge($neutron_defaults,$neutron_options)
   validate_hash($api_versions)
 
+  if $cache_backend =~ /MemcachedCache/ {
+    ensure_packages('python-memcache',
+      { name   => $::horizon::params::memcache_package,
+        tag    => ['openstack', 'horizon-package']})
+  }
+
   package { 'horizon':
     ensure => $package_ensure,
     name   => $::horizon::params::package_name,
@@ -390,21 +404,14 @@ class horizon(
     order   => '50',
   }
 
-  # debian/ubuntu do not use collect static as the packaging already handles
-  # this as part of the packages. This was put in as a work around for Debian
-  # who has since fixed their packaging.
-  # See I813b5f6067bb6ecce279cab7278d9227c4d31d28 for the original history
-  # behind this section.
-  if $::os_package_type == 'rpm' {
-    exec { 'refresh_horizon_django_cache':
-      command     => "${::horizon::params::manage_py} collectstatic --noinput --clear && ${::horizon::params::manage_py} compress --force",
-      refreshonly => true,
-      require     => Package['horizon'],
-    }
+  exec { 'refresh_horizon_django_cache':
+    command     => "${::horizon::params::manage_py} collectstatic --noinput --clear && ${::horizon::params::manage_py} compress --force",
+    refreshonly => true,
+    require     => Package['horizon'],
+  }
 
-    if $compress_offline {
-      Concat[$::horizon::params::config_file] ~> Exec['refresh_horizon_django_cache']
-    }
+  if $::os_package_type == 'rpm' and $compress_offline {
+    Concat[$::horizon::params::config_file] ~> Exec['refresh_horizon_django_cache']
   }
 
   if $configure_apache {
@@ -419,6 +426,7 @@ class horizon(
       horizon_ca     => $horizon_ca,
       extra_params   => $vhost_extra_params,
       redirect_type  => $redirect_type,
+      root_url       => $root_url
     }
   }
 

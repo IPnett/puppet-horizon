@@ -75,6 +75,10 @@
 #   users report errors accessing horizon.
 #   Defaults to 'permanent'
 #
+#  [*root_url*]
+#    (optional) The base URL used to contruct horizon web addresses.
+#    Defaults to '/dashboard' or '/horizon' depending OS
+#
 class horizon::wsgi::apache (
   $bind_address        = undef,
   $fqdn                = undef,
@@ -94,9 +98,9 @@ class horizon::wsgi::apache (
   $vhost_ssl_conf_name = 'horizon_ssl_vhost',
   $extra_params        = {},
   $redirect_type       = 'permanent',
-) {
+  $root_url            = $::horizon::params::root_url,
+) inherits horizon::params {
 
-  include ::horizon::params
   include ::apache
 
   if $fqdn {
@@ -146,17 +150,26 @@ class horizon::wsgi::apache (
     }
 
   } else {
-    $ensure_ssl_vhost = 'absent'
-    $redirect_match = '^/$'
-    $redirect_url   = $::horizon::params::root_url
+    case $root_url {
+      '': {
+        $ensure_ssl_vhost = 'absent'
+        $redirect_match = "^${::horizon::params::root_url}\$"
+        $redirect_url   = '/'
+      }
+      default: {
+        $ensure_ssl_vhost = 'absent'
+        $redirect_match = '^/$'
+        $redirect_url   = $root_url
+      }
+    }
   }
 
   if !($redirect_type in ['temp', 'permanent']) {
     fail("Invalid redirect type '${redirect_type} provided.")
   }
 
-  Package['horizon'] -> Package[$::horizon::params::http_service]
-  File[$::horizon::params::config_file] ~> Service[$::horizon::params::http_service]
+  Package['horizon'] -> Package['httpd']
+  Concat[$::horizon::params::config_file] ~> Service['httpd']
 
   $unix_user = $::osfamily ? {
     'RedHat' => $::horizon::params::apache_user,
@@ -171,7 +184,7 @@ class horizon::wsgi::apache (
     ensure  => directory,
     owner   => $unix_user,
     group   => $unix_group,
-    before  => Service[$::horizon::params::http_service],
+    before  => Service['httpd'],
     mode    => '0751',
     require => Package['horizon'],
   }
@@ -180,9 +193,14 @@ class horizon::wsgi::apache (
     ensure  => file,
     owner   => $unix_user,
     group   => $unix_group,
-    before  => Service[$::horizon::params::http_service],
+    before  => Service['httpd'],
     mode    => '0640',
     require => [ File[$::horizon::params::logdir], Package['horizon'] ],
+  }
+
+  $script_url = $root_url ? {
+    ''      => '/',
+    default => $root_url,
   }
 
   $default_vhost_conf_no_ip = {
@@ -193,14 +211,14 @@ class horizon::wsgi::apache (
     error_log_file              => 'horizon_error.log',
     priority                    => $priority,
     aliases                     => [{
-      alias => "${$::horizon::params::root_url}/static",
+      alias => "${root_url}/static",
       path  => '/usr/share/openstack-dashboard/static',
     }],
     port                        => $http_port,
     ssl_cert                    => $horizon_cert,
     ssl_key                     => $horizon_key,
     ssl_ca                      => $horizon_ca,
-    wsgi_script_aliases         => hash([$::horizon::params::root_url, $::horizon::params::django_wsgi]),
+    wsgi_script_aliases         => hash([$script_url, $::horizon::params::django_wsgi]),
     wsgi_daemon_process         => $::horizon::params::wsgi_group,
     wsgi_daemon_process_options => {
       processes                 => $wsgi_processes,
@@ -237,7 +255,7 @@ class horizon::wsgi::apache (
     wsgi_daemon_process  => 'horizon-ssl',
     wsgi_process_group   => 'horizon-ssl',
     redirectmatch_regexp => '^/$',
-    redirectmatch_dest   => $::horizon::params::root_url,
+    redirectmatch_dest   => $root_url,
   }))
 
 }
