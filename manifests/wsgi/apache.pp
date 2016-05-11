@@ -66,7 +66,8 @@
 #   (optional) Headers for the vhost.
 #
 # [*root_url*]
-#   (optional) Override root URL.
+#   (optional) The base URL used to contruct horizon web addresses.
+#   Defaults to '/dashboard' or '/horizon' depending OS
 #
 # [*extra_params*]
 #   (optional) A hash of extra paramaters for apache::wsgi class.
@@ -80,10 +81,6 @@
 #   of a 302 redirect which is not cached by browsers and may solve issues if
 #   users report errors accessing horizon.
 #   Defaults to 'permanent'
-#
-#  [*root_url*]
-#    (optional) The base URL used to contruct horizon web addresses.
-#    Defaults to '/dashboard' or '/horizon' depending OS
 #
 class horizon::wsgi::apache (
   $bind_address        = undef,
@@ -106,7 +103,6 @@ class horizon::wsgi::apache (
   $root_url            = $::horizon::params::root_url,
   $extra_params        = {},
   $redirect_type       = 'permanent',
-  $root_url            = $::horizon::params::root_url,
 ) inherits horizon::params {
 
   include ::apache
