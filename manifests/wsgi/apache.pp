@@ -222,7 +222,7 @@ class horizon::wsgi::apache (
     ssl_cert                    => $horizon_cert,
     ssl_key                     => $horizon_key,
     ssl_ca                      => $horizon_ca,
-    wsgi_script_aliases         => hash([$root_url, $::horizon::params::django_wsgi]),
+    wsgi_script_aliases         => hash([$script_url, $::horizon::params::django_wsgi]),
     wsgi_daemon_process         => $::horizon::params::wsgi_group,
     wsgi_daemon_process_options => {
       processes                 => $wsgi_processes,
